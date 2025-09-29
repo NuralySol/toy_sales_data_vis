@@ -4,8 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-dash = "*"
 pandas = "*"
+dash = "*"
 plotly = "*"
 dash-bootstrap-components = "*"
 
