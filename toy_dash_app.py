@@ -11,7 +11,7 @@ toys_df = pd.read_csv("./data/toy-sales.csv")
 unique_regions = sorted(toys_df["region"].unique())
 region_menu_options = [{"label": r, "value": r} for r in unique_regions]
 
-#* Init the app to Dash and bootstrapt it: (LUX is elegant seems to be more elegant solution of a theme)
+# * Init the app to Dash and bootstrapt it: (LUX is elegant seems to be more elegant solution of a theme)
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
 app.title = "Toy Sales Analytics"
 
@@ -28,7 +28,63 @@ def fmt_number(x):
     except Exception:
         return "-"
 
-# Navbar, can be further customized to make it more custom, and add more styles.
+# Navbar with embedded filters so selections stay visible
+navbar_filters = html.Div(
+    [
+        html.Div(
+            [
+                dbc.Label(
+                    "Select region(s):",
+                    html_for="region-menu",
+                    className="text-muted small mb-1",
+                ),
+                dcc.Dropdown(
+                    id="region-menu",
+                    options=region_menu_options,
+                    value=unique_regions,
+                    multi=True,
+                    clearable=True,
+                    searchable=True,
+                    placeholder="Choose regions...",
+                    style={"minWidth": "220px"},
+                ),
+            ],
+            className="d-flex flex-column flex-grow-1",
+            style={"minWidth": "220px", "maxWidth": "380px"},
+        ),
+        html.Div(
+            [
+                dbc.Label(
+                    "Line aggregation",
+                    className="text-muted small mb-1",
+                ),
+                dcc.RadioItems(
+                    id="line-mode",
+                    options=[
+                        {"label": " Total", "value": "total"},
+                        {"label": " By Region", "value": "region"},
+                        {"label": " By Product", "value": "product"},
+                    ],
+                    value="total",
+                    inputStyle={"marginRight": "6px"},
+                    labelStyle={"marginRight": "18px"},
+                    inline=True,
+                ),
+            ],
+            className="d-flex flex-column flex-grow-1",
+            style={"minWidth": "240px"},
+        ),
+        html.Div(
+            [
+                dbc.Button("Clear All", id="clear-btn", color="danger", size="sm"),
+                dbc.Button("Select All", id="select-btn", color="success", size="sm"),
+            ],
+            className="d-flex align-items-end gap-2",
+        ),
+    ],
+    className="d-flex flex-wrap align-items-end gap-3 w-100",
+)
+
 navbar = dbc.Navbar(
     dbc.Container(
         [
@@ -37,65 +93,31 @@ navbar = dbc.Navbar(
                     dbc.Col(
                         html.Div(
                             [
-                                html.H3("Toy Sales Dashboard", className="mb-0 fw-bold"),
+                                html.H3(
+                                    "Toy Sales Dashboard", className="mb-0 fw-bold"
+                                ),
                                 html.Small(
-                                    "data visual analytics",
-                                    className="text-muted"
+                                    "data visual analytics", className="text-muted"
                                 ),
                             ]
                         ),
-                        md="auto",
-                    )
+                        xs="auto",
+                        className="me-md-4",
+                    ),
+                    dbc.Col(navbar_filters, className="flex-grow-1"),
                 ],
                 align="center",
-                className="g-2",
+                className="g-3 flex-wrap flex-md-nowrap w-100",
             ),
         ],
         fluid=True,
     ),
     color="white",
-    class_name="border-bottom shadow-sm",
+    class_name="border-bottom shadow-sm py-2",
     sticky="top",
 )
 
-# Controls with Clear All + Select All buttons
-controls = dbc.Card(
-    [
-        html.H4("Filters", className="card-title text-primary fw-bold mb-3"),
-        dbc.Label(
-            "Select region(s) to update the KPIs and charts:",
-            className="text-muted small mb-2",
-        ),
-        dcc.Dropdown(
-            id="region-menu",
-            options=region_menu_options,
-            value=unique_regions,       # default: all selected
-            multi=True,
-            clearable=True,
-            searchable=True,
-            placeholder="Choose regions...",
-        ),
-        dbc.Row(
-            [
-                dbc.Col(
-                    dbc.Button("Clear All", id="clear-btn", color="danger", size="sm"),
-                    width="auto"
-                ),
-                dbc.Col(
-                    dbc.Button("Select All", id="select-btn", color="success", size="sm"),
-                    width="auto"
-                ),
-            ],
-            className="mt-2 g-2", 
-            justify="start"
-        ),
-    ],
-    body=True,
-    className="shadow-sm rounded-3",
-    style={"maxWidth": "600px"},
-)
-
-# kpi cards, 
+# kpi cards,
 def kpi_card(id_value, label, color="primary"):
     return dbc.Card(
         dbc.CardBody(
@@ -113,22 +135,24 @@ kpi_row = dbc.Row(
         dbc.Col(kpi_card("kpi-units", "Average Units / Order", "info"), md=4, xs=12),
         dbc.Col(kpi_card("kpi-orders", "Orders (Rows)", "secondary"), md=4, xs=12),
     ],
-    className="g-3",
+    className="g-3 mt-4",
 )
 
-# chart cards 
+# chart cards
 def chart_card(title, graph_id):
     return dbc.Card(
         [
             dbc.CardHeader(html.H5(title, className="mb-0")),
-            dbc.CardBody(dcc.Graph(id=graph_id, figure={}, config={"displayModeBar": False})),
+            dbc.CardBody(
+                dcc.Graph(id=graph_id, figure={}, config={"displayModeBar": False})
+            ),
         ],
         className="shadow-sm rounded-3 h-100",
     )
 
-line_card   = chart_card("Weekly Revenue Over Time", "line-chart")
-bar_card    = chart_card("Average Units by Product", "bar-chart")
-heatmap_card= chart_card("Revenue by Region × Product", "heatmap")
+line_card = chart_card("Weekly Revenue Over Time", "line-chart")
+bar_card = chart_card("Average Units by Product", "bar-chart")
+heatmap_card = chart_card("Revenue by Region × Product", "heatmap")
 
 # main layout of the app
 app.layout = html.Div(
@@ -136,18 +160,9 @@ app.layout = html.Div(
         navbar,
         dbc.Container(
             [
-                dbc.Row(
-                    [
-                        dbc.Col(controls, md="auto"),
-                    ],
-                    className="mt-4 mb-3",
-                    justify="start",
-                ),
-
                 # KPI row
                 kpi_row,
-
-                # Charts in a grid format: line will take the whole width but the bar and heat map is half by half in the bottom. 
+                # Charts in a grid format: line will take the whole width but the bar and heat map is half by half in the bottom.
                 dbc.Row(
                     [
                         dbc.Col(line_card, md=12, className="mt-4"),
@@ -159,7 +174,6 @@ app.layout = html.Div(
                         dbc.Col(heatmap_card, md=6, className="mt-4"),
                     ]
                 ),
-
                 # Footer of the site:
                 html.Footer(
                     [
@@ -177,7 +191,8 @@ app.layout = html.Div(
     ]
 )
 
-#* all of the needed callback functions of the @app. 
+
+# * all of the needed callback functions of the @app.
 @app.callback(
     Output("kpi-revenue", "children"),
     Output("kpi-units", "children"),
@@ -186,8 +201,9 @@ app.layout = html.Div(
     Output("bar-chart", "figure"),
     Output("heatmap", "figure"),
     Input("region-menu", "value"),
+    Input("line-mode", "value"),
 )
-def update_figs(selected_regions):
+def update_figs(selected_regions, line_mode):
     # guard
     if not selected_regions:
         dff = toys_df.iloc[0:0].copy()
@@ -196,54 +212,71 @@ def update_figs(selected_regions):
 
     # KPIs
     total_revenue = dff["revenue"].sum() if not dff.empty else 0
-    avg_units     = dff["units"].mean() if not dff.empty else 0
-    orders_count  = len(dff)
+    avg_units = dff["units"].mean() if not dff.empty else 0
+    orders_count = len(dff)
 
-    # Line chart data
+    # Line Chart 
     if dff.empty:
-        rev_by_date_df = pd.DataFrame({"date": [], "revenue": []})
+        rev_by_date_df = pd.DataFrame(
+            {"date": [], "revenue": [], "region": [], "product": []}
+        )
     else:
         rev_by_date_df = (
-            dff.groupby("date", as_index=False)["revenue"].sum().sort_values(by="date")
+            dff.groupby(["date", "region", "product"], as_index=False)["revenue"].sum()
+            .sort_values(by="date")
         )
 
-    line_fig = px.line(
-        rev_by_date_df,
-        x="date",
-        y="revenue",
-        markers=True,
-        labels={"date": "Date (2023) Weekly", "revenue": "Revenue ($)"},
-        title="Weekly Revenue Over Time",
-    )
+    if line_mode == "region":
+        plot_df = (
+            rev_by_date_df.groupby(["date", "region"], as_index=False)["revenue"].sum()
+        )
+        line_fig = px.line(
+            plot_df,
+            x="date",
+            y="revenue",
+            color="region",
+            markers=True,
+            labels={
+                "date": "Date (2023) Weekly",
+                "revenue": "Revenue ($)",
+                "region": "Region",
+            },
+            title="Weekly Revenue by Region",
+        )
+    elif line_mode == "product":
+        plot_df = (
+            rev_by_date_df.groupby(["date", "product"], as_index=False)["revenue"].sum()
+        )
+        line_fig = px.line(
+            plot_df,
+            x="date",
+            y="revenue",
+            color="product",
+            markers=True,
+            labels={
+                "date": "Date (2023) Weekly",
+                "revenue": "Revenue ($)",
+                "product": "Product",
+            },
+            title="Weekly Revenue by Product",
+        )
+    else:
+        plot_df = rev_by_date_df.groupby("date", as_index=False)["revenue"].sum()
+        line_fig = px.line(
+            plot_df,
+            x="date",
+            y="revenue",
+            markers=True,
+            labels={"date": "Date (2023) Weekly", "revenue": "Revenue ($)"},
+            title="Weekly Revenue (Total)",
+        )
+
     line_fig.update_layout(
-    # light background for better contrast
-    plot_bgcolor="rgba(248,249,250,1)",  
-    paper_bgcolor="white",
-    title=dict(x=0.5, xanchor="center"),
-
-    # X axis grid
-    xaxis=dict(
-        showgrid=True,
-        gridcolor="rgba(0,0,0,0.08)",    
-        gridwidth=1,
-        zeroline=False,
-        linecolor="rgba(0,0,0,0.2)",      
-        ticks="outside",
-    ),
-
-    # Y axis grid
-    yaxis=dict(
-        showgrid=True,
-        gridcolor="rgba(0,0,0,0.08)",
-        gridwidth=2,
-        zeroline=False,
-    ),
-
-    margin=dict(l=40, r=20, t=50, b=40),
-    template="simple_white",
-    yaxis_tickprefix="$",
-    yaxis_separatethousands=True,
-)
+        margin=dict(l=40, r=20, t=50, b=40),
+        yaxis_tickprefix="$",
+        yaxis_separatethousands=True,
+        template="simple_white",
+    )
 
     # Bar chart data
     if dff.empty:
@@ -260,7 +293,7 @@ def update_figs(selected_regions):
         x="product",
         y="units",
         color="units",
-        color_continuous_scale="viridis",
+        color_continuous_scale=px.colors.diverging.RdBu,
         text="units",
         labels={"product": "Product", "units": "Average Units"},
         title="Average Units by Product",
@@ -334,6 +367,7 @@ def update_region_selection(clear_clicks, select_clicks, current_value):
     if triggered == "select-btn":
         return unique_regions
     return current_value
+
 
 # Run the app:
 if __name__ == "__main__":
