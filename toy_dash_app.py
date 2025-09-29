@@ -1,6 +1,6 @@
 # toy_dash_app.py project:
 import pandas as pd
-from dash import Dash, dcc, html, Input, Output
+from dash import Dash, dcc, html, Input, Output, State, ctx
 import plotly.express as px
 import dash_bootstrap_components as dbc
 
@@ -58,10 +58,10 @@ navbar = dbc.Navbar(
     sticky="top",
 )
 
-# controlrs are in the top row with dbc.Card component it will will outside the layout!
+# Controls with Clear All + Select All buttons
 controls = dbc.Card(
     [
-        html.H4("Filters", className="card-title text-primary fw-bold mb-2"),
+        html.H4("Filters", className="card-title text-primary fw-bold mb-3"),
         dbc.Label(
             "Select region(s) to update the KPIs and charts:",
             className="text-muted small mb-2",
@@ -69,10 +69,25 @@ controls = dbc.Card(
         dcc.Dropdown(
             id="region-menu",
             options=region_menu_options,
-            value=unique_regions,       
+            value=unique_regions,       # default: all selected
             multi=True,
-            clearable=False,
+            clearable=True,
+            searchable=True,
             placeholder="Choose regions...",
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    dbc.Button("Clear All", id="clear-btn", color="danger", size="sm"),
+                    width="auto"
+                ),
+                dbc.Col(
+                    dbc.Button("Select All", id="select-btn", color="success", size="sm"),
+                    width="auto"
+                ),
+            ],
+            className="mt-2 g-2", 
+            justify="start"
         ),
     ],
     body=True,
@@ -121,7 +136,6 @@ app.layout = html.Div(
         navbar,
         dbc.Container(
             [
-                # Filters row (top, hugs left)
                 dbc.Row(
                     [
                         dbc.Col(controls, md="auto"),
@@ -163,7 +177,7 @@ app.layout = html.Div(
     ]
 )
 
-#* all of the needed callback functions of the @app.
+#* all of the needed callback functions of the @app. 
 @app.callback(
     Output("kpi-revenue", "children"),
     Output("kpi-units", "children"),
@@ -173,8 +187,6 @@ app.layout = html.Div(
     Output("heatmap", "figure"),
     Input("region-menu", "value"),
 )
-
-#! One gian function of update_figs depending on the context, which returns based on the context of the selection within the controls panel:
 def update_figs(selected_regions):
     # guard
     if not selected_regions:
@@ -187,7 +199,7 @@ def update_figs(selected_regions):
     avg_units     = dff["units"].mean() if not dff.empty else 0
     orders_count  = len(dff)
 
-    # Line Chart
+    # Line chart data
     if dff.empty:
         rev_by_date_df = pd.DataFrame({"date": [], "revenue": []})
     else:
@@ -201,15 +213,16 @@ def update_figs(selected_regions):
         y="revenue",
         markers=True,
         labels={"date": "Date (2023) Weekly", "revenue": "Revenue ($)"},
+        title="Weekly Revenue Over Time",
     )
     line_fig.update_layout(
-        margin=dict(l=40, r=20, t=10, b=40),
+        margin=dict(l=40, r=20, t=50, b=40),
         yaxis_tickprefix="$",
         yaxis_separatethousands=True,
         template="simple_white",
     )
 
-    # Bar chart:
+    # Bar chart data
     if dff.empty:
         units_by_product_df = pd.DataFrame({"product": [], "units": []})
     else:
@@ -227,6 +240,7 @@ def update_figs(selected_regions):
         color_continuous_scale="viridis",
         text="units",
         labels={"product": "Product", "units": "Average Units"},
+        title="Average Units by Product",
     )
     bar_fig.update_traces(
         texttemplate="%{text:.1f}",
@@ -234,13 +248,13 @@ def update_figs(selected_regions):
         hovertemplate="<b>%{x}</b><br>Units: %{y:.1f}<extra></extra>",
     )
     bar_fig.update_layout(
-        margin=dict(l=40, r=20, t=10, b=80),
+        margin=dict(l=40, r=20, t=50, b=80),
         yaxis=dict(showgrid=True, zeroline=False),
-        coloraxis_showscale=False,   
+        coloraxis_showscale=False,
         template="simple_white",
     )
 
-    # heatmap 
+    # Heatmap data
     if dff.empty:
         heatmap_pivoted_df = pd.DataFrame([[0]], index=["-"], columns=["-"])
     else:
@@ -252,12 +266,13 @@ def update_figs(selected_regions):
     heatmap_fig = px.imshow(
         heatmap_pivoted_df,
         text_auto=True,
-        color_continuous_scale=px.colors.sequential.Blues[::-1],  
+        color_continuous_scale=px.colors.sequential.Blues[::-1],
         aspect="auto",
         labels=dict(x="Product", y="Region", color="Revenue ($)"),
+        title="Revenue by Region & Product",
     )
     heatmap_fig.update_layout(
-        margin=dict(l=60, r=40, t=10, b=60),
+        margin=dict(l=60, r=40, t=60, b=60),
         xaxis=dict(side="top", tickfont=dict(size=11), automargin=True),
         yaxis=dict(tickmode="linear", tickfont=dict(size=12), automargin=True),
         coloraxis_colorbar=dict(
@@ -280,6 +295,23 @@ def update_figs(selected_regions):
         heatmap_fig,
     )
 
-# run the app with debug = True for debugging:
+
+# Buttons to clear and select with @callbacks:
+@app.callback(
+    Output("region-menu", "value"),
+    Input("clear-btn", "n_clicks"),
+    Input("select-btn", "n_clicks"),
+    State("region-menu", "value"),
+    prevent_initial_call=True,
+)
+def update_region_selection(clear_clicks, select_clicks, current_value):
+    triggered = ctx.triggered_id
+    if triggered == "clear-btn":
+        return []
+    if triggered == "select-btn":
+        return unique_regions
+    return current_value
+
+# Run the app:
 if __name__ == "__main__":
     app.run(debug=True)
