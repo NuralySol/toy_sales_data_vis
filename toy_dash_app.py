@@ -216,11 +216,34 @@ def update_figs(selected_regions):
         title="Weekly Revenue Over Time",
     )
     line_fig.update_layout(
-        margin=dict(l=40, r=20, t=50, b=40),
-        yaxis_tickprefix="$",
-        yaxis_separatethousands=True,
-        template="simple_white",
-    )
+    # light background for better contrast
+    plot_bgcolor="rgba(248,249,250,1)",  
+    paper_bgcolor="white",
+    title=dict(x=0.5, xanchor="center"),
+
+    # X axis grid
+    xaxis=dict(
+        showgrid=True,
+        gridcolor="rgba(0,0,0,0.08)",    
+        gridwidth=1,
+        zeroline=False,
+        linecolor="rgba(0,0,0,0.2)",      
+        ticks="outside",
+    ),
+
+    # Y axis grid
+    yaxis=dict(
+        showgrid=True,
+        gridcolor="rgba(0,0,0,0.08)",
+        gridwidth=2,
+        zeroline=False,
+    ),
+
+    margin=dict(l=40, r=20, t=50, b=40),
+    template="simple_white",
+    yaxis_tickprefix="$",
+    yaxis_separatethousands=True,
+)
 
     # Bar chart data
     if dff.empty:
@@ -268,13 +291,13 @@ def update_figs(selected_regions):
         text_auto=True,
         color_continuous_scale=px.colors.sequential.Blues[::-1],
         aspect="auto",
-        labels=dict(x="Product", y="Region", color="Revenue ($)"),
+        labels=dict(x=" ", y="Region", color="Revenue ($)"),
         title="Revenue by Region & Product",
     )
     heatmap_fig.update_layout(
         margin=dict(l=60, r=40, t=60, b=60),
         xaxis=dict(side="top", tickfont=dict(size=11), automargin=True),
-        yaxis=dict(tickmode="linear", tickfont=dict(size=12), automargin=True),
+        yaxis=dict(tickmode="linear", tickfont=dict(size=11), automargin=True),
         coloraxis_colorbar=dict(
             title="Revenue ($)",
             tickprefix="$",
